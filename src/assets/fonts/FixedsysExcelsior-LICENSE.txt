@@ -1,0 +1,8 @@
+Fixedsys Excelsior (versão com ligaduras de https://github.com/kika/fixedsys, v3.09.10, arquivo FSEX302-alt.ttf)
+Autor original: Darien Valentine (@bathos), antes em fixedsysexcelsior.com.
+
+Licença: domínio público. Onde isso não for permitido, Creative Commons Zero (CC0 1.0).
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Neste app, a fonte foi recortada só para os caracteres do português (latim básico, latim-1 e pontuação)
+e convertida para WOFF.
