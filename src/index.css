@@ -974,3 +974,15 @@ h2, strong, .card-head h2, .meal-tile strong, .tile strong, .choice strong, .wat
 .quiz-option > span:last-child, .food-chip > span:last-child, .option > span:last-child { text-shadow: 1px 0 0 currentColor; letter-spacing: 0.03em; }
 .ex-card .ex-title { font-size: 28px; text-shadow: none; letter-spacing: 0; }
 .mini-stat strong { text-shadow: none; }
+
+/* Refeição: alternativas como botões e o registro atual numa faixa no topo */
+.quiz-alt { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.quiz-alt .btn { min-height: 46px; font-size: 12px; white-space: normal; line-height: 1.2; padding: 8px 10px; }
+.logged-strip {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 6px 6px 14px; border-radius: var(--radius-sm);
+  border: 2px dashed var(--border-strong); background: var(--surface-2);
+}
+.logged-strip span { font-size: 16px; color: var(--muted); }
+.logged-strip b { color: var(--text); font-weight: 400; }
+.logged-strip .icon-btn { color: var(--danger); }

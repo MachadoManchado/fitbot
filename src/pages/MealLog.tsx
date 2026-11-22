@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { FoodIcon, Icon, IconBadge } from '../Icon'
+import { FoodIcon, PixelIcon } from '../Icon'
 import { Loading } from '../components'
 import { db, formatDate, MEAL_ICONS, MEAL_TYPES, today, type MealStatus, type MealType } from '../db'
 import Mascot from '../Mascot'
@@ -32,17 +32,15 @@ export default function MealLog() {
   const [step, setStep] = useState(0)
   const [picked, setPicked] = useState<number[]>([])
   const [more, setMore] = useState(false)
-  const [ready, setReady] = useState(false) // tela de refeições prontas
   const [celebrate, setCelebrate] = useState<null | MealStatus>(null)
 
   const items = useLiveQuery(() => db.dietItems.where('mealType').equals(mealType).sortBy('order'), [mealType])
-  const options = useLiveQuery(() => db.dietOptions.where('mealType').equals(mealType).sortBy('order'), [mealType])
   const existing = useLiveQuery(() => db.mealLogs.where('[date+mealType]').equals([date, mealType]).first(), [date, mealType])
 
   useEffect(() => {
     window.scrollTo(0, 0)
     setMore(false)
-  }, [step, ready])
+  }, [step])
 
   async function save(status: MealStatus, label: string, icon: string, optionId?: number) {
     const data = { date, mealType, status, label, icon, optionId, time: Date.now() }
@@ -62,13 +60,13 @@ export default function MealLog() {
     )
   }
 
-  if (!items || !options) return <Loading />
+  if (!items) return <Loading />
 
   const close = () => navigate(-1)
   const header = (onBack: () => void, label: string, progress?: number) => (
     <header className="quiz-head">
-      <button type="button" className="icon-btn" aria-label={step === 0 && !ready ? 'Fechar' : 'Voltar'} onClick={onBack}>
-        {step === 0 && !ready ? '×' : '‹'}
+      <button type="button" className="icon-btn" aria-label={step === 0 ? 'Fechar' : 'Voltar'} onClick={onBack}>
+        {step === 0 ? '×' : '‹'}
       </button>
       {progress !== undefined ? (
         <div className="quiz-progress" aria-label={label}>
@@ -80,29 +78,6 @@ export default function MealLog() {
       <span className="muted small">{date === today() ? 'Hoje' : formatDate(date)}</span>
     </header>
   )
-
-  /* ---------- Refeições prontas (atalho A/B/C/D) */
-  if (ready) {
-    return (
-      <div className="page fullscreen quiz">
-        {header(() => setReady(false), 'Refeição pronta')}
-        <div className="quiz-q">
-          <IconBadge name="zap" size={64} tone="carb" />
-          <h1>Qual refeição pronta?</h1>
-        </div>
-        <div className="quiz-options">
-          {options.map((o, i) => (
-            <button key={o.id} type="button" className={`quiz-option${existing?.optionId === o.id ? ' selected' : ''}`} onClick={() => void save('option', o.name, o.icon, o.id)}>
-              <span className="quiz-letter">{LETTERS[i] ?? '•'}</span>
-              <FoodIcon value={o.icon} size={46} />
-              <span>{o.name}</span>
-            </button>
-          ))}
-        </div>
-        {options.length === 0 && <p className="muted center-text">Nenhuma refeição pronta. Cadastre em Dieta → Editar dieta.</p>}
-      </div>
-    )
-  }
 
   /* ---------- Etapas por grupo */
   const groups = [...new Set(items.map((i) => i.group))]
@@ -149,6 +124,22 @@ export default function MealLog() {
         <p className="muted small">Pode marcar mais de um.</p>
       </div>
 
+      {existing && step === 0 && (
+        <div className="logged-strip">
+          <span>
+            Já registrado: <b>{existing.label}</b>
+          </span>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Apagar o registro atual"
+            onClick={() => confirm(`Apagar o registro (${existing.label})?`) && void db.mealLogs.delete(existing.id).then(close)}
+          >
+            <PixelIcon name="trash" size={20} />
+          </button>
+        </div>
+      )}
+
       <div className="quiz-options">
         {main.map((it, i) => {
           const on = picked.includes(it.id)
@@ -192,22 +183,14 @@ export default function MealLog() {
           {nextLabel}
         </button>
         {step === 0 && (
-          <div className="quiz-extra-links">
-            {options.length > 0 && (
-              <button type="button" className="link small" onClick={() => setReady(true)}><Icon name="zap" size={14} /> Refeição pronta</button>
-            )}
-            <button type="button" className="link small" onClick={() => void save('other', 'Fora da dieta', '🍽️')}>Comi fora da dieta</button>
-            <button type="button" className="link small" onClick={() => void save('skipped', 'Pulei', '⏭️')}>Pulei</button>
+          <div className="quiz-alt">
+            <button type="button" className="btn ghost" onClick={() => void save('other', 'Fora da dieta', '🍽️')}>
+              Comi fora da dieta
+            </button>
+            <button type="button" className="btn ghost" onClick={() => void save('skipped', 'Pulei', '⏭️')}>
+              Pulei
+            </button>
           </div>
-        )}
-        {existing && step === 0 && (
-          <button
-            type="button"
-            className="link small muted"
-            onClick={() => confirm(`Apagar o registro (${existing.label})?`) && void db.mealLogs.delete(existing.id).then(close)}
-          >
-            Apagar registro atual ({existing.label})
-          </button>
         )}
       </div>
     </div>

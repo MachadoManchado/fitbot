@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { FoodIcon } from '../Icon'
+import { FoodIcon, PixelIcon } from '../Icon'
 import { db, formatDate, today, TREATS } from '../db'
 import Mascot from '../Mascot'
 
@@ -73,10 +73,14 @@ export default function TreatLog() {
       </div>
 
       {todays && todays.length > 0 && (
-        <p className="muted small center-text">
-          Já registrado hoje: {todays.map((t) => t.name.toLowerCase()).join(', ')}{' '}
-          <button type="button" className="link small" onClick={() => void db.treats.delete(todays[todays.length - 1].id)}>desfazer último</button>
-        </p>
+        <div className="logged-strip">
+          <span>
+            Já registrado hoje: <b>{todays.map((t) => t.name.toLowerCase()).join(', ')}</b>
+          </span>
+          <button type="button" className="icon-btn" aria-label="Desfazer o último registro" onClick={() => void db.treats.delete(todays[todays.length - 1].id)}>
+            <PixelIcon name="undo" size={20} />
+          </button>
+        </div>
       )}
 
       <div className="build-foot">
