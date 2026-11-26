@@ -1,5 +1,8 @@
 import Dexie, { type EntityTable } from 'dexie'
 import { EMOJI_TO_ICON } from './Icon'
+import { CATALOG, CATALOG_BY_SLUG, type CardioMetric, type ExerciseKind } from './exerciseCatalog'
+import { FOOD_BY_NAME } from './foodCatalog'
+export type { CardioMetric, ExerciseKind } from './exerciseCatalog'
 
 /* ------------------------------------------------------------------ Tipos */
 
@@ -7,6 +10,20 @@ export interface Exercise {
   id: number
   name: string
   muscle: string
+  /** Desenho do Workout Guide (public/exercises/<slug>-1..3.svg). */
+  slug?: string
+  /** strength = carga e repetições; bodyweight = repetições; time = segundos; cardio = blocos de tempo. */
+  kind?: ExerciseKind
+  /** Cardio: velocidade e inclinação (esteira) ou nível de intensidade (bike, elíptico...). */
+  metric?: CardioMetric
+}
+
+/** Um bloco de cardio (ex.: 5 min na velocidade 10). */
+export interface CardioBlock {
+  min: number
+  speed?: number
+  incline?: number
+  level?: number
 }
 
 /** Ficha de treino (ex.: Treino A – Peito e tríceps). */
@@ -25,6 +42,10 @@ export interface PlanExercise {
   weight: number
   note?: string
   order: number
+  /** Exercício por tempo: segundos por série. */
+  seconds?: number
+  /** Cardio: blocos de intervalo. */
+  blocks?: CardioBlock[]
 }
 
 /** Um treino feito (sessão). */
@@ -45,6 +66,10 @@ export interface WorkoutSet {
   reps: number
   weight: number
   createdAt: number
+  seconds?: number
+  speed?: number
+  incline?: number
+  level?: number
 }
 
 export const MEAL_TYPES = ['Café da manhã', 'Almoço', 'Lanche', 'Jantar', 'Ceia'] as const
@@ -80,6 +105,18 @@ export interface DietItem {
   name: string
   icon: string
   order: number
+  /** Unidade de medida (fatia, concha, unidade...) e calorias estimadas por unidade. */
+  unit?: string
+  kcal?: number
+}
+
+/** Um alimento dentro do registro de uma refeição (com quantidade, nas interfaces mais detalhadas). */
+export interface LoggedFood {
+  name: string
+  icon: string
+  qty?: number
+  unit?: string
+  kcal?: number
 }
 
 /** Besteira registrada (fora das refeições). */
@@ -116,6 +153,8 @@ export interface MealLog {
   label: string
   icon: string
   time: number
+  items?: LoggedFood[]
+  kcal?: number
 }
 
 export interface BodyLog {
@@ -171,8 +210,21 @@ export interface SessionItem {
   reps: number
   weight: number
   note?: string
-  done: number // séries feitas
+  done: number // séries feitas (no cardio: blocos feitos)
+  seconds?: number
+  blocks?: CardioBlock[]
 }
+
+/** Como a pessoa prefere usar o app (escolhido no primeiro acesso). */
+export type UiMode = 'simples' | 'detalhada' | 'completa'
+export interface Prefs {
+  onboarded: boolean
+  mode: UiMode
+  snacks: number // lanches por dia
+  sound: boolean
+  vibrate: boolean
+}
+export const DEFAULT_PREFS: Prefs = { onboarded: false, mode: 'simples', snacks: 1, sound: true, vibrate: true }
 
 export interface Setting {
   key: string
@@ -255,6 +307,20 @@ db.version(5).upgrade(async (tx) => {
 // v6: registro de água.
 db.version(6).stores({ water: '++id, date' })
 
+// v7: catálogo completo de exercícios (Workout Guide), tipos de exercício e cardio; unidade e calorias nos ingredientes.
+db.version(7)
+  .stores({ exercises: '++id, name, muscle, slug' })
+  .upgrade(async (tx) => {
+    await syncExerciseCatalog(tx.table('exercises'))
+    await tx.table('dietItems').toCollection().modify((r: DietItem) => {
+      const f = FOOD_BY_NAME.get(r.name.toLowerCase())
+      if (f && !r.unit) {
+        r.unit = f[3]
+        r.kcal = f[4]
+      }
+    })
+  })
+
 // Se outra aba (ou uma versão nova do app) precisar atualizar o banco, esta fecha e recarrega,
 // em vez de deixar a atualização travada (o que deixava telas em branco).
 db.on('versionchange', () => {
@@ -265,7 +331,7 @@ db.on('versionchange', () => {
 
 export const DEFAULT_GOALS: Goals = { workoutsPerWeek: 3 }
 
-export const MUSCLES = ['Peito', 'Costas', 'Pernas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Cardio', 'Outro']
+export const MUSCLES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Antebraço', 'Pernas', 'Glúteos', 'Abdômen', 'Cardio', 'Mobilidade', 'Outro']
 
 export const MUSCLE_ICONS: Record<string, string> = {
   Peito: 'dumbbell',
@@ -276,6 +342,9 @@ export const MUSCLE_ICONS: Record<string, string> = {
   Tríceps: 'biceps-flexed',
   Abdômen: 'person-standing',
   Cardio: 'heart-pulse',
+  Antebraço: 'biceps-flexed',
+  Glúteos: 'footprints',
+  Mobilidade: 'person-standing',
   Outro: 'activity',
 }
 
@@ -304,10 +373,10 @@ const SEED_EXERCISES: Omit<Exercise, 'id'>[] = [
   { name: 'Tríceps pulley', muscle: 'Tríceps' },
   { name: 'Tríceps francês', muscle: 'Tríceps' },
   { name: 'Tríceps banco', muscle: 'Tríceps' },
-  { name: 'Prancha (segundos)', muscle: 'Abdômen' },
+  { name: 'Prancha', muscle: 'Abdômen' },
   { name: 'Abdominal supra', muscle: 'Abdômen' },
-  { name: 'Esteira (minutos)', muscle: 'Cardio' },
-  { name: 'Bicicleta (minutos)', muscle: 'Cardio' },
+  { name: 'Esteira', muscle: 'Cardio' },
+  { name: 'Bicicleta', muscle: 'Cardio' },
 ]
 
 const SEED_PLANS: { name: string; items: [string, number, number, number][] }[] = [
@@ -381,7 +450,10 @@ async function seedDietItems(table: AnyTable) {
   const rows: Omit<DietItem, 'id'>[] = []
   for (const type of MEAL_TYPES) {
     let order = 0
-    for (const [group, items] of Object.entries(SEED_ITEMS[type])) for (const [name, icon] of items) rows.push({ mealType: type, group, name, icon, order: order++ })
+    for (const [group, items] of Object.entries(SEED_ITEMS[type])) for (const [name, icon] of items) {
+      const f = FOOD_BY_NAME.get(name.toLowerCase())
+      rows.push({ mealType: type, group, name, icon, order: order++, unit: f?.[3], kcal: f?.[4] })
+    }
   }
   await table.bulkAdd(rows as never[])
 }
@@ -417,6 +489,7 @@ async function seedPlansAndDiet(exercises: AnyTable, plans: AnyTable, planExerci
 db.on('populate', async (tx) => {
   await seedPlansAndDiet(tx.table('exercises'), tx.table('plans'), tx.table('planExercises'), tx.table('dietOptions'))
   await seedDietItems(tx.table('dietItems'))
+  await syncExerciseCatalog(tx.table('exercises'))
   await tx.table('settings').put({ key: 'goals', value: DEFAULT_GOALS })
 })
 
@@ -491,4 +564,71 @@ export async function importBackup(json: string): Promise<void> {
     }
     await seedDietItems(db.dietItems as unknown as AnyTable)
   })
+}
+
+/* ------------------------------------------------------------------ Catálogo de exercícios */
+
+/** Nomes antigos do app → desenho do Workout Guide. */
+const LEGACY_SLUG: Record<string, string> = {
+  'Supino reto': 'bench-press', 'Supino inclinado com halteres': 'incline-dumbbell-press', Crucifixo: 'dumbbell-fly',
+  'Flexão de braço': 'push-up', 'Puxada frontal': 'lat-pulldown', 'Remada curvada': 'dumbbell-bent-over-row', 'Remada baixa': 'seated-row',
+  'Remada unilateral': 'one-arm-dumbbell-row', 'Agachamento livre': 'squat', 'Leg press': 'leg-press', 'Cadeira extensora': 'leg-extension',
+  'Mesa flexora': 'lying-leg-curl', 'Levantamento terra': 'deadlift', Afundo: 'walking-lunge', 'Panturrilha em pé': 'standing-calf-raise',
+  'Desenvolvimento com halteres': 'seated-dumbbell-press', 'Elevação lateral': 'lateral-raise', 'Elevação frontal': 'front-raise',
+  'Rosca direta': 'bicep-curl', 'Rosca martelo': 'hammer-curl', 'Rosca alternada': 'bicep-curl', 'Tríceps pulley': 'tricep-pushdown',
+  'Tríceps francês': 'skull-crusher', 'Tríceps banco': 'bench-dip', 'Prancha (segundos)': 'plank', Prancha: 'plank',
+  'Abdominal supra': 'crunch', 'Esteira (minutos)': 'running', Esteira: 'running', 'Bicicleta (minutos)': 'cycling', Bicicleta: 'cycling',
+}
+const RENAME: Record<string, string> = { 'Prancha (segundos)': 'Prancha', 'Esteira (minutos)': 'Esteira', 'Bicicleta (minutos)': 'Bicicleta' }
+
+/** Liga os exercícios existentes ao desenho e ao tipo, e acrescenta todos os do catálogo que faltam. */
+async function syncExerciseCatalog(table: import('dexie').Table<Exercise, number>) {
+  const all = await table.toArray()
+  const have = new Set<string>()
+  for (const e of all) {
+    const slug = e.slug ?? LEGACY_SLUG[e.name]
+    const row = slug ? CATALOG_BY_SLUG.get(slug) : undefined
+    const patch: Partial<Exercise> = {}
+    if (slug && !e.slug) patch.slug = slug
+    if (row && !e.kind) {
+      patch.kind = row[3]
+      if (row[5]) patch.metric = row[5]
+    }
+    if (!row && !e.kind) patch.kind = e.muscle === 'Cardio' ? 'cardio' : 'strength'
+    if (RENAME[e.name]) patch.name = RENAME[e.name]
+    if (Object.keys(patch).length) await table.update(e.id, patch)
+    if (slug) have.add(slug)
+  }
+  const missing = CATALOG.filter((r) => !have.has(r[0])).map((r) => ({ name: r[1], muscle: r[2], slug: r[0], kind: r[3], metric: r[5] }))
+  if (missing.length) await table.bulkAdd(missing as Exercise[])
+}
+
+/** Tipo efetivo de um exercício (exercícios antigos sem tipo contam como carga). */
+export function kindOf(e?: Pick<Exercise, 'kind' | 'muscle'>): ExerciseKind {
+  return e?.kind ?? (e?.muscle === 'Cardio' ? 'cardio' : 'strength')
+}
+
+/** Blocos padrão de um cardio novo: 20 minutos num ritmo só. */
+export function defaultBlocks(metric?: CardioMetric): CardioBlock[] {
+  return [metric === 'speed' ? { min: 20, speed: 6, incline: 0 } : { min: 20, level: 5 }]
+}
+
+const n1 = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+
+/** Texto curto de uma série: "10×20 kg", "12 reps", "30 s", "5 min · 10 km/h · 2%". */
+export function describeSet(s: Pick<WorkoutSet, 'reps' | 'weight' | 'seconds' | 'speed' | 'incline' | 'level'>): string {
+  if (s.speed !== undefined || s.level !== undefined) {
+    const min = n1((s.seconds ?? 0) / 60)
+    if (s.speed !== undefined) return `${min} min · ${n1(s.speed)} km/h${s.incline ? ` · ${s.incline}%` : ''}`
+    return `${min} min · nível ${s.level}`
+  }
+  if (s.seconds && !s.reps) return `${s.seconds} s${s.weight ? ` + ${n1(s.weight)} kg` : ''}`
+  return s.weight ? `${s.reps}×${n1(s.weight)} kg` : `${s.reps} reps`
+}
+
+/** Texto curto de um exercício da ficha. */
+export function describePlanItem(i: PlanExercise): string {
+  if (i.blocks?.length) return i.blocks.map((b) => describeSet({ reps: 0, weight: 0, seconds: b.min * 60, speed: b.speed, incline: b.incline, level: b.level })).join(' → ')
+  if (i.seconds && !i.reps) return `${i.sets}×${i.seconds} s`
+  return `${i.sets}×${i.reps}${i.weight ? ` com ${n1(i.weight)} kg` : ''}`
 }

@@ -1,4 +1,4 @@
-import { db, DEFAULT_GOALS, formatDuration, MEAL_TYPES, type Goals } from './db'
+import { db, DEFAULT_GOALS, formatDuration, MEAL_TYPES, type Goals, describePlanItem, describeSet } from './db'
 
 const STATUS: Record<string, string> = {
   option: 'na dieta (refeição pronta)',
@@ -56,7 +56,7 @@ export async function exportMarkdown(): Promise<string> {
     const order: number[] = []
     for (const s of ws) if (!order.includes(s.exerciseId)) order.push(s.exerciseId)
     for (const exId of order) {
-      const list = ws.filter((s) => s.exerciseId === exId).map((s) => `${s.reps}×${num(s.weight)}kg`)
+      const list = ws.filter((s) => s.exerciseId === exId).map((s) => describeSet(s))
       L.push(`  - ${exName.get(exId) ?? 'Exercício apagado'}: ${list.join(', ')}`)
     }
     L.push('')
@@ -102,7 +102,7 @@ export async function exportMarkdown(): Promise<string> {
     L.push(`### ${p.name}`, '')
     const items = planExercises.filter((i) => i.planId === p.id).sort((a, b) => a.order - b.order)
     if (items.length === 0) L.push('_Sem exercícios._')
-    for (const i of items) L.push(`- ${exName.get(i.exerciseId) ?? '?'}: ${i.sets}×${i.reps} com ${num(i.weight)} kg${i.note ? ` (${i.note})` : ''}`)
+    for (const i of items) L.push(`- ${exName.get(i.exerciseId) ?? '?'}: ${describePlanItem(i)}${i.note ? ` (${i.note})` : ''}`)
     L.push('')
   }
 

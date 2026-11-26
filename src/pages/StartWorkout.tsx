@@ -31,7 +31,7 @@ export default function StartWorkout() {
       return
     }
     const workoutId = await db.workouts.add({ date: today(), name, planId, startedAt: Date.now() })
-    const sessionItems: SessionItem[] = items.map((i) => ({ exerciseId: i.exerciseId, sets: i.sets, reps: i.reps, weight: i.weight, note: i.note, done: 0 }))
+    const sessionItems: SessionItem[] = items.map((i) => ({ exerciseId: i.exerciseId, sets: i.blocks?.length ?? i.sets, reps: i.reps, weight: i.weight, note: i.note, done: 0, seconds: i.seconds, blocks: i.blocks }))
     await setActiveSession({ workoutId, planId, items: sessionItems, current: 0 })
     navigate('/sessao', { replace: true })
   }

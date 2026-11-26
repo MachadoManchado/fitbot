@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, DEFAULT_GOALS, MEAL_TYPES, ON_DIET, shiftDate, today, waterGoalFor, type ActiveSession, type Goals } from './db'
+import { db, DEFAULT_GOALS, DEFAULT_PREFS, MEAL_TYPES, ON_DIET, shiftDate, today, waterGoalFor, type ActiveSession, type Goals, type Prefs } from './db'
 
 export function useGoals(): Goals {
   const row = useLiveQuery(() => db.settings.get('goals'), [])
@@ -86,4 +86,14 @@ export function useWater(date: string) {
     const drunk = logs.reduce((s, l) => s + l.ml, 0)
     return { logs, drunk, goal: waterGoalFor(weight, workouts > 0, goals.waterMl), auto: goals.waterMl === undefined, weight }
   }, [date, goals.waterMl])
+}
+
+/** Preferências do app (interface, lanches por dia, sons, vibração). */
+export function usePrefs(): Prefs | undefined {
+  return useLiveQuery(async () => ({ ...DEFAULT_PREFS, ...(((await db.settings.get('prefs'))?.value as Partial<Prefs>) ?? {}) }), [])
+}
+
+export async function savePrefs(patch: Partial<Prefs>) {
+  const cur = ((await db.settings.get('prefs'))?.value as Partial<Prefs>) ?? {}
+  await db.settings.put({ key: 'prefs', value: { ...DEFAULT_PREFS, ...cur, ...patch } })
 }

@@ -1,3 +1,4 @@
+import { CATALOG_BY_SLUG } from './exerciseCatalog'
 import { IconBadge } from './Icon'
 import { MUSCLE_ICONS } from './db'
 /**
@@ -69,8 +70,11 @@ const CROP: Record<string, [number, number, number, number]> = {
   'walking-lunge': [94, 69, 337, 437],
 }
 
-export function animFor(exerciseName?: string): string | undefined {
-  return exerciseName ? EXERCISE_ANIM[exerciseName] : undefined
+/** Desenho de um exercício: pelo slug salvo nele ou, nos antigos, pelo nome. */
+export function animFor(ex?: string | { name: string; slug?: string }): string | undefined {
+  if (!ex) return undefined
+  if (typeof ex === 'string') return EXERCISE_ANIM[ex]
+  return ex.slug ?? EXERCISE_ANIM[ex.name]
 }
 
 const url = (slug: string, i: number) => `${import.meta.env.BASE_URL}exercises/${slug}-${i}.svg`
@@ -81,7 +85,7 @@ export function ExerciseAnim({ slug, still = false, label }: { slug: string; sti
   return (
     <div className={`ex-anim${still ? ' still' : ''}`} role="img" aria-label={label ? `Animação: ${label}` : 'Animação do exercício'}>
       {frames.map((i) => (
-        <svg key={i} className="ex-frame" viewBox={(CROP[slug] ?? [0, 0, 512, 512]).join(' ')} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <svg key={i} className="ex-frame" viewBox={(CATALOG_BY_SLUG.get(slug)?.[4] ?? CROP[slug] ?? [0, 0, 512, 512]).join(' ')} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
           <image href={url(slug, i)} width="512" height="512" />
         </svg>
       ))}
@@ -90,8 +94,8 @@ export function ExerciseAnim({ slug, still = false, label }: { slug: string; sti
 }
 
 /** Miniatura parada do exercício (para listas); sem desenho, mostra o ícone do grupo muscular. */
-export function ExerciseThumb({ name, muscle, size = 56 }: { name?: string; muscle?: string; size?: number }) {
-  const slug = animFor(name)
+export function ExerciseThumb({ name, muscle, slug: given, size = 56 }: { name?: string; muscle?: string; slug?: string; size?: number }) {
+  const slug = given ?? animFor(name)
   if (!slug) return <IconBadge name={MUSCLE_ICONS[muscle ?? 'Outro'] ?? 'dumbbell'} size={size} />
   return (
     <span className="ex-thumb" style={{ width: size, height: size }}>

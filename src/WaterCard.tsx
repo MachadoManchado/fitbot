@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Toast } from './components'
 import { CUP_ML, db, today } from './db'
 import { useWater } from './hooks'
+import { PixelIcon } from './Icon'
+import { sfx } from './sfx'
 
 const fmtL = (ml: number) => `${(ml / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} L`
 
@@ -14,7 +16,10 @@ export default function WaterCard({ date = today() }: { date?: string }) {
   useEffect(() => {
     if (!w) return
     const now = w.drunk >= w.goal
-    if (reached.current === false && now) setToast('Meta de água batida!')
+    if (reached.current === false && now) {
+      setToast('Meta de água batida!')
+      sfx.goal()
+    }
     reached.current = now
   }, [w])
 
@@ -27,7 +32,10 @@ export default function WaterCard({ date = today() }: { date?: string }) {
   if (!w) return null
   const cups = Math.round(w.goal / CUP_ML)
   const filled = Math.floor(w.drunk / CUP_ML)
-  const add = (ml: number) => void db.water.add({ date, ml, time: Date.now() })
+  const add = (ml: number) => {
+    if (w.drunk + ml < w.goal) sfx.water()
+    void db.water.add({ date, ml, time: Date.now() })
+  }
   const undo = () => {
     const last = w.logs[w.logs.length - 1]
     if (last) void db.water.delete(last.id)
@@ -36,7 +44,7 @@ export default function WaterCard({ date = today() }: { date?: string }) {
   return (
     <section className="water-card" aria-label="Água do dia">
       <div className="water-head">
-        <span className="food-emoji" style={{ fontSize: 30 }} aria-hidden="true">💧</span>
+        <span className="water-icon" aria-hidden="true"><PixelIcon name="drop" size={30} /></span>
         <div>
           <strong>Água</strong>
           <span className="muted small block">
@@ -48,7 +56,9 @@ export default function WaterCard({ date = today() }: { date?: string }) {
 
       <div className="water-drops" aria-hidden="true">
         {Array.from({ length: Math.max(cups, filled) }, (_, i) => (
-          <span key={i} className={`drop${i < filled ? ' full' : ''}${i >= cups ? ' extra' : ''}`} />
+          <span key={i} className={`pdrop${i < filled ? ' full' : ''}${i >= cups ? ' extra' : ''}`}>
+            <PixelIcon name="drop" size={26} />
+          </span>
         ))}
       </div>
 

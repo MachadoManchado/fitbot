@@ -38,23 +38,88 @@ const FACES: Record<Mood, string[]> = {
   sleepy: ['............', '............', '............', '.###....###.', '............', '.....##.....', '............'],
 }
 
-// Braços para cima (comemoração) no segundo quadro do humor "great".
-const ARMS_UP = ['...#..#......#..#...', '....#.#..##..#.#....']
+/** O que o robô está fazendo (cada atividade tem 2 quadros). */
+export type Activity = 'idle' | 'wave' | 'look' | 'laptop' | 'water' | 'flex' | 'sleep'
 
-function sprite(mood: Mood, frame: 0 | 1): string[] {
-  const rows = BODY.map((r) => r.split(''))
-  const face = FACES[mood]
-  face.forEach((line, y) => line.split('').forEach((c, x) => (rows[4 + y][4 + x] = c)))
-  if (mood === 'sleepy') {
-    rows[0] = '..............###...'.split('') // antena "apagada" e um "z" de sono acima da cabeça
-    rows[1] = '.........##....#....'.split('')
-    rows[2] = '.........##...###...'.split('')
+type Grid = string[][]
+const put = (g: Grid, x: number, y: number, on = true) => {
+  if (g[y] && x >= 0 && x < 20) g[y][x] = on ? '#' : '.'
+}
+const row = (g: Grid, y: number, line: string) => (g[y] = line.split(''))
+const face = (g: Grid, lines: string[]) => lines.forEach((line, y) => line.split('').forEach((c, x) => (g[4 + y][4 + x] = c)))
+/** Tira os braços padrão (diagonais para baixo). */
+const noArms = (g: Grid) => [[4, 13], [3, 14], [15, 13], [16, 14]].forEach(([x, y]) => put(g, x, y, false))
+
+function sprite(mood: Mood, frame: 0 | 1, activity: Activity): string[] {
+  const g: Grid = BODY.map((r) => r.split(''))
+  face(g, FACES[mood])
+  const f = frame === 1
+  switch (activity) {
+    case 'sleep': {
+      face(g, FACES.sleepy)
+      row(g, 0, f ? '................###.' : '..............###...')
+      row(g, 1, f ? '.........##.....#...' : '.........##...#.....')
+      row(g, 2, f ? '.........##....###..' : '.........##...###...')
+      break
+    }
+    case 'look': {
+      face(g, ['............', f ? '...##....##.' : '.##....##...', f ? '...##....##.' : '.##....##...', '............', '............', '....####....', '............'])
+      break
+    }
+    case 'wave': {
+      put(g, 15, 13, false)
+      put(g, 16, 14, false)
+      put(g, 15, 13)
+      put(g, 16, 12)
+      // Mão abanando: 3 pixels que inclinam de um lado para o outro.
+      if (f) [[17, 11], [18, 10], [19, 9], [18, 9]].forEach(([x, y]) => put(g, x, y))
+      else [[17, 11], [17, 10], [17, 9], [16, 9]].forEach(([x, y]) => put(g, x, y))
+      face(g, FACES.great)
+      break
+    }
+    case 'water': {
+      put(g, 16, 14, false)
+      if (!f) {
+        ;[[16, 13], [17, 13]].forEach(([x, y]) => put(g, x, y))
+        row(g, 10, g[10].join('').slice(0, 17) + '#.#')
+        row(g, 11, g[11].join('').slice(0, 17) + '#.#')
+        row(g, 12, g[12].join('').slice(0, 17) + '###')
+      } else {
+        ;[[16, 12], [17, 11]].forEach(([x, y]) => put(g, x, y))
+        put(g, 15, 13)
+        ;[[18, 9], [19, 9], [18, 10], [19, 10]].forEach(([x, y]) => put(g, x, y))
+        put(g, 17, 8)
+        face(g, ['............', '............', '..##....##..', '............', '.........###', '............', '............'])
+      }
+      break
+    }
+    case 'flex': {
+      face(g, FACES.great)
+      noArms(g)
+      if (f) {
+        row(g, 13, '...#..#......#..#...')
+        row(g, 14, '....#.#..##..#.#....')
+        ;[[2, 12], [3, 12], [4, 12], [15, 12], [16, 12], [17, 12]].forEach(([x, y]) => put(g, x, y))
+      } else {
+        ;[[4, 13], [3, 14], [15, 13], [16, 14]].forEach(([x, y]) => put(g, x, y))
+        ;[[2, 15], [3, 15], [4, 15], [15, 15], [16, 15], [17, 15]].forEach(([x, y]) => put(g, x, y))
+      }
+      break
+    }
+    case 'laptop': {
+      face(g, ['............', '............', '............', '..##....##..', '............', '.....##.....', '............'])
+      row(g, 13, '....#.#......#.#....')
+      row(g, 14, '...#.##########.#...')
+      row(g, 15, '...#.#........#.#...')
+      row(g, 16, '...#.#...##...#.#...')
+      row(g, 17, f ? '.....#........#.#...' : '...#.#........#.....')
+      row(g, 18, '..################..')
+      row(g, 19, '....................')
+      if (f) put(g, 9, 16, false)
+      break
+    }
   }
-  if (frame === 1 && mood === 'great') {
-    rows[13] = ARMS_UP[0].split('')
-    rows[14] = ARMS_UP[1].split('')
-  }
-  return rows.map((r) => r.join(''))
+  return g.map((r) => r.join(''))
 }
 
 function toPath(rows: string[], dy = 0): string {
@@ -75,11 +140,12 @@ function toPath(rows: string[], dy = 0): string {
   return d
 }
 
-export default function Mascot({ mood, size = 140 }: { mood: Mood; size?: number }) {
-  const a = sprite(mood, 0)
-  const b = sprite(mood, 1)
-  // Quadro 2: o corpo sobe 1 pixel (os pés ficam), um pulinho.
-  const bUp = mood === 'sleepy' ? b : [...b.slice(1, 18), b[17], b[18], b[19]]
+export default function Mascot({ mood, size = 140, activity, onClick }: { mood: Mood; size?: number; activity?: Activity; onClick?: () => void }) {
+  const act: Activity = activity ?? (mood === 'sleepy' ? 'sleep' : mood === 'great' ? 'flex' : 'idle')
+  const a = sprite(mood, 0, act)
+  const b = sprite(mood, 1, act)
+  // Quadro 2 do "parado": o corpo sobe 1 pixel (os pés ficam), um pulinho.
+  const bUp = act === 'idle' ? [...b.slice(1, 18), b[17], b[18], b[19]] : b
   return (
     <svg
       width={size}
@@ -87,7 +153,8 @@ export default function Mascot({ mood, size = 140 }: { mood: Mood; size?: number
       viewBox="-1 -1 22 22"
       role="img"
       aria-label="Seu guia, um robô"
-      className={`mascot pixel-bot mascot-${mood}`}
+      className={`mascot pixel-bot mascot-${mood} act-${act}`}
+      onClick={onClick}
       shapeRendering="crispEdges"
     >
       <path className="bot-frame bot-a" d={toPath(a)} fill="currentColor" />

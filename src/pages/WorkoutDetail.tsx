@@ -1,8 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Card, Empty, Page, fmt, numOrUndef } from '../components'
-import { db, formatDate, formatDuration, type Exercise, type WorkoutSet } from '../db'
+import { Card, Empty, Page, numOrUndef } from '../components'
+import { db, formatDate, formatDuration, type Exercise, type WorkoutSet, describeSet } from '../db'
 
 export default function WorkoutDetail() {
   const { id } = useParams()
@@ -123,7 +123,7 @@ function ExerciseBlock({ exercise, workoutId, workoutDate, sets }: { exercise: E
     <Card title={exercise.name}>
       {previous && (
         <p className="muted small">
-          Última vez ({formatDate(previous.date)}): {previous.sets.map((s) => `${s.reps}×${fmt(s.weight)}kg`).join(' · ')}
+          Última vez ({formatDate(previous.date)}): {previous.sets.map((s) => describeSet(s)).join(' · ')}
         </p>
       )}
       {sets.length > 0 && (
@@ -131,8 +131,7 @@ function ExerciseBlock({ exercise, workoutId, workoutDate, sets }: { exercise: E
           <thead>
             <tr>
               <th>Série</th>
-              <th>Reps</th>
-              <th>Carga</th>
+              <th colSpan={2}>Feito</th>
               <th aria-label="Ações" />
             </tr>
           </thead>
@@ -140,8 +139,7 @@ function ExerciseBlock({ exercise, workoutId, workoutDate, sets }: { exercise: E
             {sets.map((s, i) => (
               <tr key={s.id}>
                 <td>{i + 1}</td>
-                <td>{s.reps}</td>
-                <td>{fmt(s.weight)} kg</td>
+                <td colSpan={2}>{describeSet(s)}</td>
                 <td>
                   <button type="button" className="icon-btn" aria-label="Apagar série" onClick={() => confirm('Apagar esta série?') && void db.sets.delete(s.id)}>
                     ×

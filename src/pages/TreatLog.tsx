@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FoodIcon, PixelIcon } from '../Icon'
 import { db, formatDate, today, TREATS } from '../db'
 import Mascot from '../Mascot'
+import { sfx } from '../sfx'
 
 /** Registrar besteiras (fora das refeições), para avaliar depois. */
 export default function TreatLog() {
@@ -20,6 +21,7 @@ export default function TreatLog() {
     const now = Date.now()
     const rows = TREATS.flatMap(([name, icon]) => Array.from({ length: counts[name] ?? 0 }, () => ({ date, name, icon, time: now })))
     if (rows.length) await db.treats.bulkAdd(rows)
+    sfx.soft()
     setDone(true)
     setTimeout(() => navigate(-1), 1200)
   }
