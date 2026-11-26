@@ -27,21 +27,25 @@ export default function Diet() {
     const log = mine[mine.length - 1]
     const okCount = mine.filter((l) => ON_DIET.includes(l.status)).length
     const complete = mine.length >= slots
-    const partial = mine.length > 0 && !complete
-    // Lanche com 2+ por dia: o quadrado vai enchendo de verde (metade, um terço...).
-    const fill = partial ? Math.round((mine.length / slots) * 100) : 0
+    const n = Math.min(mine.length, slots)
+    // Lanche com 2+ por dia: o verde entra na diagonal (1º lanche = metade de baixo/esquerda, 2º completa o quadrado).
+    const slotted = slots > 1 && n > 0
     return (
       <Link
         key={type}
         to={`/refeicao/${encodeURIComponent(type)}${q}`}
-        className={`meal-tile${complete && log ? ` logged ${log.status}` : ''}${partial ? ' partial' : ''}`}
-        style={partial ? ({ '--fill': `${fill}%` } as React.CSSProperties) : undefined}
+        aria-label={slots > 1 ? `${type}: ${n} de ${slots}` : type}
+        className={`meal-tile${slotted ? ' slotted' : complete && log ? ` logged ${log.status}` : ''}`}
       >
+        {slotted && (
+          <span
+            className="tile-fill"
+            aria-hidden="true"
+            style={{ '--clip-from': diagonal((n - 1) / slots), '--clip-to': diagonal(n / slots) } as React.CSSProperties}
+          />
+        )}
         <FoodIcon value={log ? log.icon : MEAL_ICONS[type]} size={44} />
         <strong>{type}</strong>
-        <span className="muted small clamp">
-          {slots > 1 ? `${mine.length} de ${slots}${log ? ` · ${log.label}` : ''}` : log ? log.label : 'Registrar'}
-        </span>
         {complete && okCount > 0 && <span className="check" aria-label="Na dieta">✓</span>}
       </Link>
     )
@@ -59,24 +63,29 @@ export default function Diet() {
       <div className="meal-grid">{MEAL_TYPES.filter((t) => t !== 'Ceia').map(tile)}</div>
 
       <div className="extra-row">
-        <Link to={`/refeicao/Ceia${q}`} className={`mini-tile${ceia ? ` logged ${ceia.status}` : ''}`}>
+        <Link to={`/refeicao/Ceia${q}`} aria-label="Ceia (opcional)" className={`mini-tile ceia${ceia ? ` logged ${ceia.status}` : ''}`}>
           <FoodIcon value={ceia ? ceia.icon : MEAL_ICONS.Ceia} size={30} />
-          <span>
-            <strong>Ceia</strong>
-            <span className="muted small block clamp">{ceia ? ceia.label : 'Opcional'}</span>
-          </span>
+          <strong>Ceia</strong>
           {ceia && ON_DIET.includes(ceia.status) && <span className="check" aria-label="Na dieta">✓</span>}
         </Link>
-        <Link to={`/besteira${q}`} className="mini-tile treat">
+        <Link to={`/besteira${q}`} className="mini-tile treat" aria-label={`Registrar besteira (${treats.length} hoje)`}>
           <FoodIcon value="🍩" size={30} />
-          <span>
-            <strong>Besteira</strong>
-            <span className="muted small block clamp">{treats.length === 0 ? 'Sem julgamento' : `${treats.length} hoje`}</span>
-          </span>
+          <strong>Besteira</strong>
         </Link>
       </div>
 
       <WaterCard date={date} />
     </Page>
   )
+}
+
+/**
+ * Recorte do quadrado preenchido até a fração f, cortado na diagonal a partir do canto de baixo à esquerda.
+ * Sempre 5 pontos, para a animação poder passar de um estado ao outro.
+ */
+function diagonal(f: number): string {
+  const s = Math.max(0, Math.min(2, f * 2))
+  const p = (x: number, y: number) => `${(x * 100).toFixed(1)}% ${(y * 100).toFixed(1)}%`
+  if (s <= 1) return `polygon(${p(0, 1 - s)}, ${p(0, 1 - s)}, ${p(s, 1)}, ${p(s, 1)}, ${p(0, 1)})`
+  return `polygon(${p(0, 0)}, ${p(s - 1, 0)}, ${p(1, 2 - s)}, ${p(1, 1)}, ${p(0, 1)})`
 }

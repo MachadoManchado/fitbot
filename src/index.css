@@ -1098,3 +1098,53 @@ a.screen-talk { text-decoration: none; display: block; animation: talk-in 260ms 
 .block-row .step-btn, .block-row .steppers.three .step-btn { width: 28px; height: 38px; font-size: 1rem; border-radius: 9px; }
 .block-row .stepper-value, .block-row .steppers.three .stepper-value { min-width: 26px; font-size: 16px; text-align: center; }
 .block-row .icon-btn { width: 28px; min-width: 28px; padding: 0; }
+
+/* ------------------------------------------------------------------ Paleta de 3 cores (2026-11-25)
+   Verde = dieta, conquistas e o console · Roxo = treino, seleção e links · Cinzas = o resto.
+   O laranja e o azul antigos foram trocados pelo roxo; "fora da dieta" e besteira ficam em cinza. */
+:root {
+  --accent-2: #8b5cf6;
+  --accent-2-shadow: #6a3fd9;
+  --accent-2-soft: #ede6fe;
+  --on-accent-2: #ffffff;
+  --blue: #7c4dea;
+  --blue-shadow: #5f33c7;
+  --blue-soft: #ede6fe;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent-2: #a78bfa;
+    --accent-2-shadow: #7c5ce0;
+    --accent-2-soft: #2a2140;
+    --on-accent-2: #160b33;
+    --blue: #a78bfa;
+    --blue-shadow: #7c5ce0;
+    --blue-soft: #2a2140;
+  }
+}
+.tone-carb, .tone-protein, .tone-veg, .tone-fruit { --c: var(--accent-shadow); }
+.tone-drink, .tone-train { --c: var(--accent-2); }
+.tone-treat { --c: var(--muted); }
+@media (prefers-color-scheme: dark) {
+  .tone-carb, .tone-protein, .tone-veg, .tone-fruit { --c: var(--accent); }
+  .tone-drink, .tone-train { --c: var(--accent-2); }
+  .tone-treat { --c: var(--muted); }
+}
+/* "Comi fora da dieta": cinza neutro, sem cor de alerta */
+.meal-tile.logged.other, .mini-tile.logged.other { border-color: var(--border-strong); background: var(--surface-2); }
+/* Ceia: tracejado roxo (opcional). Besteira: discreta, em cinza. */
+.mini-tile.ceia { border-color: var(--accent-2); color: var(--text); }
+.mini-tile.ceia.logged.option, .mini-tile.ceia.logged.built { border-style: dashed; border-color: var(--accent-2); background: var(--accent-2-soft); }
+.mini-tile.ceia .check { background: var(--accent-2); color: var(--on-accent-2); }
+.mini-tile.treat { border-color: var(--border); background: transparent; color: var(--muted); }
+.mini-tile.treat strong { font-weight: 400; text-shadow: none; color: var(--muted); }
+.mini-tile.treat .pixel-food { opacity: 0.55; filter: grayscale(0.6); }
+.mini-tile .treat-count { margin-left: auto; font-family: var(--font-pixel); font-size: 0.8rem; color: var(--muted); }
+
+/* Lanche com 2+ por dia: o verde entra na diagonal, metade por lanche */
+.meal-tile.slotted { border-color: var(--accent); }
+.tile-fill { position: absolute; inset: 0; border-radius: inherit; background: var(--accent-soft); pointer-events: none; clip-path: var(--clip-to); animation: fill-diag 700ms var(--ease-enter) both; }
+@keyframes fill-diag { from { clip-path: var(--clip-from); } to { clip-path: var(--clip-to); } }
+.meal-tile > :not(.tile-fill):not(.check) { position: relative; }
+.meal-tile .check { z-index: 1; }
+@media (prefers-reduced-motion: reduce) { .tile-fill { animation: none; } }
