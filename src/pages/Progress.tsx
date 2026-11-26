@@ -168,8 +168,8 @@ function WaterChart() {
               <XAxis dataKey="date" tickFormatter={(d: string) => d.slice(8, 10)} fontSize={11} stroke="var(--muted)" />
               <YAxis fontSize={11} stroke="var(--muted)" width={36} domain={[0, top]} allowDataOverflow />
               <Tooltip labelFormatter={(d) => formatDate(String(d))} formatter={(v) => [`${fmt(Number(v), 2)} L`, 'Água']} />
-              {water && <ReferenceLine y={water.goal / 1000} stroke="var(--blue)" strokeDasharray="4 4" />}
-              <Bar dataKey="litros" fill="var(--blue)" radius={[4, 4, 0, 0]} />
+              {water && <ReferenceLine y={water.goal / 1000} stroke="var(--water)" strokeDasharray="4 4" />}
+              <Bar dataKey="litros" fill="var(--water)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
           <p className="muted small">Linha tracejada: sua meta de hoje{water ? ` (${fmt(water.goal / 1000, 2)} L)` : ''}.</p>

@@ -1148,3 +1148,66 @@ a.screen-talk { text-decoration: none; display: block; animation: talk-in 260ms 
 .meal-tile > :not(.tile-fill):not(.check) { position: relative; }
 .meal-tile .check { z-index: 1; }
 @media (prefers-reduced-motion: reduce) { .tile-fill { animation: none; } }
+
+/* ------------------------------------------------------------------ Cores (revisão 2026-11-26)
+   Cor maior: verde (home/console). Destaque menor: lilás #A78BFA (botões de seleção, abas, links, treino).
+   Cores "naturais" não mudam: água é azul, comida tem a cor da comida. */
+:root {
+  --accent-2: #a78bfa;
+  --accent-2-shadow: #7c5ce0;
+  --accent-2-soft: #f0ebfe;
+  --on-accent-2: #1e1238;
+  /* "--blue" virou o lilás de seleção/navegação; a água tem o próprio azul */
+  --blue: #8b6cf0;           /* lilás um pouco mais escuro para texto em fundo claro */
+  --blue-shadow: #6a4bd6;
+  --blue-soft: #f0ebfe;
+  --water: #3a9bf0;
+  --water-shadow: #2479c7;
+  --water-soft: #e3f1fd;
+  --lcd-bg: #06120b;         /* fundo "sujo" de fósforo verde, nada de preto absoluto */
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent-2: #a78bfa;
+    --accent-2-shadow: #7c5ce0;
+    --accent-2-soft: #251d3d;
+    --on-accent-2: #1a1030;
+    --blue: #a78bfa;
+    --blue-shadow: #7c5ce0;
+    --blue-soft: #251d3d;
+    --water: #4aa7f5;
+    --water-shadow: #2a7cc4;
+    --water-soft: #13283d;
+  }
+}
+.tone-drink { --c: var(--water); }
+.water-card { background: var(--water-soft); border-color: color-mix(in srgb, var(--water) 35%, var(--surface)); }
+.water-icon, .pdrop { color: var(--water); }
+.pdrop.extra { color: var(--water); opacity: 0.6; }
+.btn.water-btn { --b: var(--water); --bs: var(--water-shadow); --bt: #fff; }
+.quiz-option.selected .quiz-letter, .check-row.on .check-box { color: var(--on-accent-2); }
+.msg.me { color: var(--on-accent-2); background: var(--accent-2); }
+
+/* ------------------------------------------------------------------ CRT leve no console da Início
+   Varredura + vinheta (vidro curvo) + brilho externo + uma piscada bem sutil. Sem distorção (o iPhone não lida bem). */
+.console .panel {
+  position: relative; overflow: hidden;
+  background-color: var(--lcd-bg);
+  background-image:
+    repeating-linear-gradient(0deg, rgb(0 0 0 / 0.3) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 42%, rgb(57 242 127 / 0.09) 0%, transparent 70%);
+  background-size: auto, auto;
+  box-shadow: 0 0 18px rgb(57 242 127 / 0.28), inset 0 0 0 1.5px rgb(57 242 127 / 0.35);
+}
+.console .panel.screen { border-radius: 22px / 28px; }
+.console .panel.meters { border-radius: 14px / 18px; }
+.console .panel::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: radial-gradient(ellipse at center, transparent 58%, rgb(0 0 0 / 0.5) 100%);
+  box-shadow: inset 0 0 26px rgb(0 0 0 / 0.75);
+}
+.console .panel > * { position: relative; z-index: 1; }
+.console .panel .screen-hearts { position: absolute; }
+.console .panel.screen > * { animation: crt-flicker 5s infinite steps(1); }
+@keyframes crt-flicker { 0%, 100% { opacity: 1; } 46% { opacity: 0.92; } 47% { opacity: 1; } 81% { opacity: 0.96; } }
+@media (prefers-reduced-motion: reduce) { .console .panel.screen > * { animation: none; } }
